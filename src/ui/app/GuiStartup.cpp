@@ -234,6 +234,9 @@ namespace GuiStartup {
             case 4:
                 locale = "ru_RU";
                 break;
+            case 5:
+                locale = "pt_BR";
+                break;
             default:
                 locale = QLocale().name();
         }
