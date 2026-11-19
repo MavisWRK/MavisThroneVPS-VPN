@@ -189,6 +189,8 @@ namespace Configs {
             Rules.push_back(std::make_shared<RouteRule>(*item));
         }
         defaultOutboundID = other.defaultOutboundID;
+        selectedAppsOnly = other.selectedAppsOnly;
+        selectedApps = other.selectedApps;
         isRaw = other.isRaw;
         rawRoute = other.rawRoute;
         preventModifications = other.preventModifications;

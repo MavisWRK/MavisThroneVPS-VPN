@@ -9786,6 +9786,10 @@ Close without saving?</source>
 <context>
     <name>MainWindow</name>
     <message>
+        <source>Core running; WireGuard peer not verified</source>
+        <translation>Ядро работает; соединение с узлом WireGuard не проверено</translation>
+    </message>
+    <message>
         <source>Connect</source>
         <translation>Подключиться</translation>
     </message>
@@ -13647,6 +13651,66 @@ To fix this, share the hotspot from the throne-tun adapter instead of &quot;%1&q
 </context>
 <context>
     <name>RouteItem</name>
+    <message>
+        <source>Selected apps only</source>
+        <translation>Только выбранные приложения</translation>
+    </message>
+    <message>
+        <source>Requires TUN mode and a WireGuard profile without proxy wrappers. Save, then reconnect to apply changes. Unchecked apps and all other apps use the direct connection. Rules on the other tab are inactive in this mode. No kill switch is provided.</source>
+        <translation>Требуются режим TUN и профиль WireGuard без дополнительных прокси. Сохраните изменения и подключитесь заново. Неотмеченные и все остальные приложения используют прямое соединение. Правила на другой вкладке в этом режиме не действуют. Функция блокировки трафика при разрыве VPN не предусмотрена.</translation>
+    </message>
+    <message>
+        <source>Use VPN / executable</source>
+        <translation>Использовать VPN / исполняемый файл</translation>
+    </message>
+    <message>
+        <source>Path / status</source>
+        <translation>Путь / состояние</translation>
+    </message>
+    <message>
+        <source>Add .exe</source>
+        <translation>Добавить .exe</translation>
+    </message>
+    <message>
+        <source>Change path...</source>
+        <translation>Изменить путь...</translation>
+    </message>
+    <message>
+        <source>Apps</source>
+        <translation>Приложения</translation>
+    </message>
+    <message>
+        <source>Windows executables (*.exe)</source>
+        <translation>Исполняемые файлы Windows (*.exe)</translation>
+    </message>
+    <message>
+        <source>Add executable</source>
+        <translation>Добавить исполняемый файл</translation>
+    </message>
+    <message>
+        <source>Already listed</source>
+        <translation>Уже в списке</translation>
+    </message>
+    <message>
+        <source>This executable is already listed.</source>
+        <translation>Этот исполняемый файл уже в списке.</translation>
+    </message>
+    <message>
+        <source>Choose an entry</source>
+        <translation>Выберите запись</translation>
+    </message>
+    <message>
+        <source>Select a row to update its path.</source>
+        <translation>Выберите строку, чтобы обновить путь.</translation>
+    </message>
+    <message>
+        <source>Choose the new executable path</source>
+        <translation>Выберите новый путь к исполняемому файлу</translation>
+    </message>
+    <message>
+        <source> — missing or moved</source>
+        <translation> — удалён или перемещён</translation>
+    </message>
     <message>
         <source>Routing Profile</source>
         <translation>Профиль маршрутизации</translation>

@@ -794,7 +794,7 @@ set(HEADLESS_SYS_SOURCES
 )
 list(APPEND PROJECT_SOURCES ${HEADLESS_SYS_SOURCES})
 
-# Appended last so engine TUs form trailing MSVC unity batches: adding one never regroups the batches above.
+# Keep engine sources together for build organization and boundary checks.
 set(ENGINE_SOURCES
         include/engine/EngineTypes.h
         include/engine/EngineControl.h
@@ -885,7 +885,6 @@ set(ENGINE_SOURCES
         src/engine/headless/Preflight.cpp
         include/engine/headless/HeadlessMain.h
         src/engine/headless/HeadlessMain.cpp
-        # Last: its <windows.h> macros must not reach a later TU of the same MSVC unity batch.
         include/engine/supervisor/CoreSupervisor.h
         src/engine/supervisor/CoreSupervisor.cpp
 )
@@ -932,7 +931,8 @@ set_target_properties(Throne PROPERTIES
 )
 
 if (WIN32 AND MSVC)
-    set_target_properties(Throne PROPERTIES UNITY_BUILD ON)
+    # Qt's generated qrc sources reuse static symbol names and collide when batched into a unity translation unit.
+    set_target_properties(Throne PROPERTIES UNITY_BUILD OFF)
 endif ()
 set_property(SOURCE "3rdparty/SQLiteCpp/src/sqlite3.c" PROPERTY SKIP_UNITY_BUILD_INCLUSION ON)
 set_property(SOURCE "3rdparty/monocypher/monocypher.c" PROPERTY SKIP_UNITY_BUILD_INCLUSION ON)

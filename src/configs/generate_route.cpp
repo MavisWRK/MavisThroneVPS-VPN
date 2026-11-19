@@ -341,6 +341,30 @@ namespace Configs {
                 return;
             }
             routeChain = std::make_shared<RouteProfile>(*routeChain);
+            if (routeChain->selectedAppsOnly) {
+                if (routeChain->isRaw || routeChain->isRemote) {
+                    ctx.error = "Selected apps only requires a local structured routing profile";
+                    return;
+                }
+                if (ctx.os != Windows) {
+                    ctx.error = "Selected apps only is available on Windows";
+                    return;
+                }
+                if (!settings.spmode_vpn) {
+                    ctx.error = "Selected apps only requires TUN mode; enable TUN and reconnect";
+                    return;
+                }
+                if (ctx.ent == nullptr || ctx.ent->type != QLatin1String("wireguard")) {
+                    ctx.error = "Selected apps only requires a connected WireGuard profile";
+                    return;
+                }
+                const auto group = dataManager->groupsRepo->GetGroup(ctx.ent->gid);
+                if (exitWrapperOn() || (group != nullptr &&
+                    (group->front_proxy_id >= 0 || group->landing_proxy_id >= 0))) {
+                    ctx.error = "Selected apps only requires WireGuard without an exit wrapper or group proxy hops";
+                    return;
+                }
+            }
             const auto &routeDeps = ctx.prerequisites.routing;
 
             QJsonObject rawRouteObj;
@@ -398,10 +422,12 @@ namespace Configs {
                         {"strategy", settings.resolve_domain_strategy},
                     };
                 }
-                injected.dnsHijack = QJsonObject{
-                    {"protocol", "dns"},
-                    {"action", "hijack-dns"},
-                };
+                if (!routeChain->selectedAppsOnly) {
+                    injected.dnsHijack = QJsonObject{
+                        {"protocol", "dns"},
+                        {"action", "hijack-dns"},
+                    };
+                }
             }
             if (ctx.policy.listeners) {
                 injected.dnsInReject = QJsonObject{
@@ -410,7 +436,7 @@ namespace Configs {
                 };
             }
             // Ahead of resolve, which would swap the name for a fake address Tor cannot dial.
-            if (ctx.policy.fullRouting && torExit()) {
+            if (ctx.policy.fullRouting && torExit() && !routeChain->selectedAppsOnly) {
                 injected.torOnion = QJsonObject{
                     {"domain_suffix", QJsonArray{"onion"}},
                     {"action", "route"},
@@ -419,8 +445,22 @@ namespace Configs {
             }
 
             QList<int> sourceIndexes;
-            auto profileRules = routeChain->isRaw ? rawRouteObj.value("rules").toArray()
-                                                  : routeChain->get_route_rules(false, routeDeps.outboundMap, &sourceIndexes);
+            QJsonArray profileRules;
+            if (routeChain->isRaw) profileRules = rawRouteObj.value("rules").toArray();
+            else if (!routeChain->selectedAppsOnly)
+                profileRules = routeChain->get_route_rules(false, routeDeps.outboundMap, &sourceIndexes);
+            if (routeChain->selectedAppsOnly) {
+                QJsonArray paths;
+                for (const auto& app : routeChain->selectedApps) {
+                    if (app.enabled) paths.append(app.path);
+                }
+                if (!paths.isEmpty()) profileRules.append(QJsonObject{
+                    {"inbound", QJsonArray{tags::tunIn}},
+                    {"process_path", paths},
+                    {"action", "route"},
+                    {"outbound", tags::proxy},
+                });
+            }
             QList<RouteRuleOrigin> profileOrigins;
             if (routeChain->isRaw) {
                 for (qsizetype i = 0; i < profileRules.size(); i++) profileOrigins.append({RouteRuleOriginKind::RawRule, static_cast<int>(i), {}});
@@ -451,7 +491,7 @@ namespace Configs {
                 for (const auto& rs : rawRouteObj.value("rule_set").toArray()) ruleSetArray.append(rs);
             }
 
-            const int defOut = routeChain->defaultOutboundID;
+            const int defOut = routeChain->selectedAppsOnly ? directID : routeChain->defaultOutboundID;
             const QString finalTag = routeChain->isRaw
                 ? (rawRouteObj.contains("final") ? rawRouteObj.value("final").toString() : QString(tags::proxy))
                 : defOut == blockID       ? QString(tags::direct)
@@ -467,13 +507,15 @@ namespace Configs {
                 return false;
             };
             QJsonArray vpnAuxRules;
-            for (const auto &auxTag : vpnAuxTags) {
-                if (!routeChain->isRaw && carriesGate(profileRules, auxTag)) continue;
-                vpnAuxRules.append(QJsonObject{
-                    {"preferred_by", QJsonArray{auxTag}},
-                    {"action", "route"},
-                    {"outbound", auxTag},
-                });
+            if (!routeChain->selectedAppsOnly) {
+                for (const auto &auxTag : vpnAuxTags) {
+                    if (!routeChain->isRaw && carriesGate(profileRules, auxTag)) continue;
+                    vpnAuxRules.append(QJsonObject{
+                        {"preferred_by", QJsonArray{auxTag}},
+                        {"action", "route"},
+                        {"outbound", auxTag},
+                    });
+                }
             }
 
             // defOut == blockID also yields finalTag "direct", but rejects before reaching it.
@@ -536,7 +578,7 @@ namespace Configs {
             } else {
                 route["final"] = finalTag;
             }
-            if (settings.enable_stats && !route.contains("find_process"))  route["find_process"] = true;
+            if ((settings.enable_stats || routeChain->selectedAppsOnly) && !route.contains("find_process")) route["find_process"] = true;
             if (!route.contains("default_domain_resolver"))
                 route["default_domain_resolver"] = directDomainResolver();
             if (settings.spmode_vpn && !route.contains("auto_detect_interface")) route["auto_detect_interface"] = true;

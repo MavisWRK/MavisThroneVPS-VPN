@@ -15,6 +15,7 @@ class QCheckBox;
 class QCloseEvent;
 class QKeyEvent;
 class QLabel;
+class QTableWidget;
 class QuickListsView;
 class RouteDnsEditor;
 class RouteRulesPage;
@@ -64,6 +65,8 @@ private:
     QuickListsView* quickListsView = nullptr;
 
     RouteDnsEditor* dnsEditor = nullptr;
+    QCheckBox* selectedAppsMode = nullptr;
+    QTableWidget* selectedAppsTable = nullptr;
 
     QList<QPair<QString, int>> endpointCandidates;
 
@@ -76,6 +79,8 @@ private:
     bool discardConfirmed = false;
 
     void setupHeader();
+    void setupSelectedApps();
+    void refreshSelectedApps();
 
     void setupRemoteSection();
 

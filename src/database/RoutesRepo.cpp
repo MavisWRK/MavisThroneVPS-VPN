@@ -63,6 +63,8 @@ namespace Configs {
                 dns_json TEXT NOT NULL DEFAULT '',
                 custom_dns INTEGER NOT NULL DEFAULT 0,
                 source_gid INTEGER NOT NULL DEFAULT -1,
+                selected_apps_only INTEGER NOT NULL DEFAULT 0,
+                selected_apps_json TEXT NOT NULL DEFAULT '[]',
                 created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
                 updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))
             )
@@ -91,6 +93,10 @@ namespace Configs {
             db.exec("ALTER TABLE route_profiles ADD COLUMN custom_dns INTEGER NOT NULL DEFAULT 0");
         if (!routeProfilesColumnExists("source_gid"))
             db.exec("ALTER TABLE route_profiles ADD COLUMN source_gid INTEGER NOT NULL DEFAULT -1");
+        if (!routeProfilesColumnExists("selected_apps_only"))
+            db.exec("ALTER TABLE route_profiles ADD COLUMN selected_apps_only INTEGER NOT NULL DEFAULT 0");
+        if (!routeProfilesColumnExists("selected_apps_json"))
+            db.exec("ALTER TABLE route_profiles ADD COLUMN selected_apps_json TEXT NOT NULL DEFAULT '[]'");
 
         db.exec(R"(
             CREATE TABLE IF NOT EXISTS route_rules (
@@ -193,6 +199,12 @@ namespace Configs {
         routeProfile->autoUpdate = json["autoUpdate"].toBool();
         routeProfile->remoteLastUpdate = static_cast<qint64>(json["remoteLastUpdate"].toDouble());
         routeProfile->source_gid = json["sourceGid"].toInt(-1);
+        routeProfile->selectedAppsOnly = json["selectedAppsOnly"].toBool();
+        for (const auto& value : json["selectedApps"].toArray()) {
+            const auto app = value.toObject();
+            const QString path = app["path"].toString();
+            if (!path.isEmpty()) routeProfile->selectedApps.append({path, app["enabled"].toBool(true)});
+        }
         for (const auto& endpointValue : json["endpointProfileIDs"].toArray()) {
             if (endpointValue.isDouble()) routeProfile->endpointProfileIDs.append(endpointValue.toInt());
         }
@@ -222,12 +234,16 @@ namespace Configs {
 
         const QString dnsJson = routeProfile->dns
             ? QString::fromUtf8(QJsonDocument(routeProfile->dns->ToJson()).toJson(QJsonDocument::Compact)) : QString();
+        QJsonArray appsArray;
+        for (const auto& app : routeProfile->selectedApps)
+            appsArray.append(QJsonObject{{"path", app.path}, {"enabled", app.enabled}});
+        const QString appsJson = QString::fromUtf8(QJsonDocument(appsArray).toJson(QJsonDocument::Compact));
 
         db.execThrow(R"(
             INSERT INTO route_profiles (id, name, default_outbound_id, is_raw, raw_route, prevent_modifications,
                 is_remote, remote_url, auto_update, remote_last_update, endpoint_profile_ids,
-                inner_hop_endpoint_ids, dns_json, custom_dns, source_gid)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                inner_hop_endpoint_ids, dns_json, custom_dns, source_gid, selected_apps_only, selected_apps_json)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
                 name = excluded.name, default_outbound_id = excluded.default_outbound_id,
                 is_raw = excluded.is_raw, raw_route = excluded.raw_route,
@@ -238,6 +254,8 @@ namespace Configs {
                 inner_hop_endpoint_ids = excluded.inner_hop_endpoint_ids,
                 dns_json = excluded.dns_json, custom_dns = excluded.custom_dns,
                 source_gid = excluded.source_gid,
+                selected_apps_only = excluded.selected_apps_only,
+                selected_apps_json = excluded.selected_apps_json,
                 updated_at = strftime('%s', 'now')
         )",
             id,
@@ -254,7 +272,9 @@ namespace Configs {
             innerHopsJson.toStdString(),
             dnsJson.toStdString(),
             routeProfile->customDns ? 1 : 0,
-            routeProfile->source_gid
+            routeProfile->source_gid,
+            routeProfile->selectedAppsOnly ? 1 : 0,
+            appsJson.toStdString()
         );
 
         db.execThrow("DELETE FROM route_rules WHERE route_profile_id = ?", id);
@@ -318,6 +338,9 @@ namespace Configs {
             json["dns"] = dnsDoc.object();
         json["customDns"] = stmt.getColumn(13).getInt() != 0;
         json["sourceGid"] = stmt.getColumn(14).getInt();
+        json["selectedAppsOnly"] = stmt.getColumn(15).getInt() != 0;
+        const auto appsDoc = QJsonDocument::fromJson(QString::fromStdString(stmt.getColumn(16).getText()).toUtf8());
+        json["selectedApps"] = appsDoc.isArray() ? appsDoc.array() : QJsonArray();
         return routeProfileFromJson(json);
     }
 
@@ -345,7 +368,7 @@ namespace Configs {
         auto profileQuery = db.query(R"(
             SELECT id, name, default_outbound_id, is_raw, raw_route, prevent_modifications,
                    is_remote, remote_url, auto_update, remote_last_update, endpoint_profile_ids,
-                   inner_hop_endpoint_ids, dns_json, custom_dns, source_gid
+                   inner_hop_endpoint_ids, dns_json, custom_dns, source_gid, selected_apps_only, selected_apps_json
             FROM route_profiles WHERE id = ?
         )", id);
         if (!profileQuery || !profileQuery->executeStep()) {
@@ -516,7 +539,7 @@ namespace Configs {
         QList<int> idsInOrder;
         QSet<int> cachedProfiles;
 
-        auto profileQuery = db.query("SELECT id, name, default_outbound_id, is_raw, raw_route, prevent_modifications, is_remote, remote_url, auto_update, remote_last_update, endpoint_profile_ids, inner_hop_endpoint_ids, dns_json, custom_dns, source_gid FROM route_profiles ORDER BY id");
+        auto profileQuery = db.query("SELECT id, name, default_outbound_id, is_raw, raw_route, prevent_modifications, is_remote, remote_url, auto_update, remote_last_update, endpoint_profile_ids, inner_hop_endpoint_ids, dns_json, custom_dns, source_gid, selected_apps_only, selected_apps_json FROM route_profiles ORDER BY id");
         if (!profileQuery) return routeProfiles;
 
         QMutexLocker locker(&mutex);

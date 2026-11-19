@@ -219,9 +219,16 @@ void MainWindow::refresh_status(const QString &traffic_update) {
     }
 
     const QString vpnExitState = vpnAuth()->exitStateText();
-    const QString runningDetail = vpnExitState.isEmpty()
-                                      ? (running ? running->runningCountryInfo : QString())
-                                      : vpnExitState;
+    QString runningDetail = vpnExitState.isEmpty()
+                                ? (running ? running->runningCountryInfo : QString())
+                                : vpnExitState;
+    if (running != nullptr && running->type == QLatin1String("wireguard")) {
+        const auto runningRoute = Configs::dataManager->routesRepo->GetRouteProfile(Configs::RunningRouteId());
+        if (runningRoute != nullptr && runningRoute->selectedAppsOnly) {
+            if (!runningDetail.isEmpty()) runningDetail += QLatin1Char('\n');
+            runningDetail += tr("Core running; WireGuard peer not verified");
+        }
+    }
 
     if (QDateTime::currentSecsSinceEpoch() - last_test_time > 2) {
         QString runningLabelText;

@@ -9704,6 +9704,10 @@ Close without saving?</source>
 <context>
     <name>MainWindow</name>
     <message>
+        <source>Core running; WireGuard peer not verified</source>
+        <translation>核心正在运行；尚未验证 WireGuard 对端</translation>
+    </message>
+    <message>
         <source>Program</source>
         <translation>程序</translation>
     </message>
@@ -13587,6 +13591,66 @@ Windows 随后会忽略让 Throne 自身连接不进入 Tun 的适配器绑定�
 </context>
 <context>
     <name>RouteItem</name>
+    <message>
+        <source>Selected apps only</source>
+        <translation>仅选中的应用</translation>
+    </message>
+    <message>
+        <source>Requires TUN mode and a WireGuard profile without proxy wrappers. Save, then reconnect to apply changes. Unchecked apps and all other apps use the direct connection. Rules on the other tab are inactive in this mode. No kill switch is provided.</source>
+        <translation>需要 TUN 模式和不带代理封装的 WireGuard 配置。保存后重新连接以应用更改。未勾选的应用和其他所有应用均使用直连。此模式下，另一标签页的规则不会生效。不提供断网保护。</translation>
+    </message>
+    <message>
+        <source>Use VPN / executable</source>
+        <translation>使用 VPN / 可执行文件</translation>
+    </message>
+    <message>
+        <source>Path / status</source>
+        <translation>路径 / 状态</translation>
+    </message>
+    <message>
+        <source>Add .exe</source>
+        <translation>添加 .exe</translation>
+    </message>
+    <message>
+        <source>Change path...</source>
+        <translation>更改路径...</translation>
+    </message>
+    <message>
+        <source>Apps</source>
+        <translation>应用</translation>
+    </message>
+    <message>
+        <source>Windows executables (*.exe)</source>
+        <translation>Windows 可执行文件 (*.exe)</translation>
+    </message>
+    <message>
+        <source>Add executable</source>
+        <translation>添加可执行文件</translation>
+    </message>
+    <message>
+        <source>Already listed</source>
+        <translation>已在列表中</translation>
+    </message>
+    <message>
+        <source>This executable is already listed.</source>
+        <translation>此可执行文件已在列表中。</translation>
+    </message>
+    <message>
+        <source>Choose an entry</source>
+        <translation>选择一项</translation>
+    </message>
+    <message>
+        <source>Select a row to update its path.</source>
+        <translation>选择一行以更新其路径。</translation>
+    </message>
+    <message>
+        <source>Choose the new executable path</source>
+        <translation>选择新的可执行文件路径</translation>
+    </message>
+    <message>
+        <source> — missing or moved</source>
+        <translation> — 已删除或移动</translation>
+    </message>
     <message>
         <source>Routing Profile</source>
         <translation>路由配置档</translation>
