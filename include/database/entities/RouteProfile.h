@@ -61,10 +61,18 @@ namespace Configs {
 
     class RouteProfile {
     public:
+        struct SelectedApp {
+            QString path;
+            bool enabled = true;
+            bool operator==(const SelectedApp&) const = default;
+        };
         int id = -1;
         QString name = "";
         QList<std::shared_ptr<RouteRule>> Rules;
         int defaultOutboundID = proxyID;
+        // Opt-in Windows TUN routing. Stored separately from Rules so older profiles retain their rules.
+        bool selectedAppsOnly = false;
+        QList<SelectedApp> selectedApps;
 
         // rawRoute is a whole sing-box `route` JSON object; preventModifications uses it verbatim, otherwise Throne still injects its plumbing.
         bool isRaw = false;
