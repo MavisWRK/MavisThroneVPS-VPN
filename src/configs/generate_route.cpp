@@ -507,13 +507,15 @@ namespace Configs {
                 return false;
             };
             QJsonArray vpnAuxRules;
-            for (const auto &auxTag : vpnAuxTags) {
-                if (!routeChain->isRaw && carriesGate(profileRules, auxTag)) continue;
-                vpnAuxRules.append(QJsonObject{
-                    {"preferred_by", QJsonArray{auxTag}},
-                    {"action", "route"},
-                    {"outbound", auxTag},
-                });
+            if (!routeChain->selectedAppsOnly) {
+                for (const auto &auxTag : vpnAuxTags) {
+                    if (!routeChain->isRaw && carriesGate(profileRules, auxTag)) continue;
+                    vpnAuxRules.append(QJsonObject{
+                        {"preferred_by", QJsonArray{auxTag}},
+                        {"action", "route"},
+                        {"outbound", auxTag},
+                    });
+                }
             }
 
             // defOut == blockID also yields finalTag "direct", but rejects before reaching it.
