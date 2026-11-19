@@ -3,7 +3,7 @@ r"""Checks res/translations/*.ts against the strings in the code.
 
 Runs lupdate over src, include and 3rdparty into temporary copies of the .ts files and compares each copy with its
 original per (context, source, comment):
-  missing  in the code, but absent or unfinished in the .ts: an error for zh_CN and ru_RU, only counted for fa_IR;
+  missing  in the code, but absent or unfinished in the .ts: an error for zh_CN and ru_RU, only counted for fa_IR and pt_BR;
   stale    in the .ts, but no longer in the code: an error in every language.
 Stale entries listed in script/translations_allowlist.txt are not reported: one "context | source" line each, \n for a
 line break, for strings translated through a variable that lupdate cannot see.
@@ -25,7 +25,7 @@ TS_DIR = ROOT / "res" / "translations"
 ALLOWLIST = ROOT / "script" / "translations_allowlist.txt"
 SOURCES = ["src", "include", "3rdparty"]
 # Whether a missing entry is an error, per language.
-LANGUAGES = {"zh_CN": True, "ru_RU": True, "fa_IR": False}
+LANGUAGES = {"zh_CN": True, "ru_RU": True, "fa_IR": False, "pt_BR": False}
 CPP_SUFFIXES = {".c", ".c++", ".cc", ".cpp", ".cxx", ".ch", ".h", ".h++", ".hh", ".hpp", ".hxx"}
 # A class or struct whose tr() comes from Q_DECLARE_TR_FUNCTIONS(context), the macro ahead of any nested brace.
 TR_FUNCTIONS = re.compile(r"\b(?:class|struct)\s+(?:\w+\s+)*?(\w+)\s*(?:final\s*)?(?::[^;{]*)?\{[^{}]*?"
