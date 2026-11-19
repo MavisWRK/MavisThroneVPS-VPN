@@ -17,9 +17,13 @@
 #include <limits>
 
 #include <QCheckBox>
+#include <QAbstractItemView>
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QDir>
+#include <QFileDialog>
+#include <QFileInfo>
 #include <QFrame>
 #include <QGuiApplication>
 #include <QHBoxLayout>
@@ -38,6 +42,8 @@
 #include <QSignalBlocker>
 #include <QTabBar>
 #include <QTabWidget>
+#include <QTableWidget>
+#include <QHeaderView>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -165,6 +171,7 @@ RouteItem::RouteItem(QWidget *parent, const std::shared_ptr<Configs::RouteProfil
     QuickLists::EnsureLists(*chain);
 
     setupHeader();
+    setupSelectedApps();
     setupRemoteSection();
     setupEndpointsSection();
     syncEndpointRules();
@@ -240,6 +247,109 @@ void RouteItem::setupHeader() {
         ui->defaultCombo->addItem(RouteEditor::ThenLabel(RouteEditor::ThenOfOutbound(id)), id);
     }
     setDefaultOutbound(chain->defaultOutboundID);
+}
+
+void RouteItem::setupSelectedApps() {
+#ifdef Q_OS_WIN
+    auto* tab = new QWidget(ui->tabWidget);
+    auto* layout = new QVBoxLayout(tab);
+    selectedAppsMode = new QCheckBox(tr("Selected apps only"), tab);
+    selectedAppsMode->setChecked(chain->selectedAppsOnly);
+    selectedAppsMode->setEnabled(!chain->isRaw && !chain->isRemote);
+    layout->addWidget(selectedAppsMode);
+    auto* note = new QLabel(tr("Requires TUN mode and a WireGuard profile without proxy wrappers. Save, then reconnect to apply changes. "
+                               "Unchecked apps and all other apps use the direct connection. Rules on the other tab are inactive in this mode. "
+                               "No kill switch is provided."), tab);
+    note->setWordWrap(true);
+    layout->addWidget(note);
+    selectedAppsTable = new QTableWidget(0, 3, tab);
+    selectedAppsTable->setHorizontalHeaderLabels({tr("Use VPN / executable"), tr("Path / status"), tr("Remove")});
+    selectedAppsTable->horizontalHeader()->setStretchLastSection(false);
+    selectedAppsTable->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    selectedAppsTable->setSelectionMode(QAbstractItemView::SingleSelection);
+    selectedAppsTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    layout->addWidget(selectedAppsTable);
+    auto* actions = new QHBoxLayout();
+    auto* add = new QPushButton(tr("Add .exe"), tab);
+    auto* change = new QPushButton(tr("Change path..."), tab);
+    actions->addWidget(add);
+    actions->addWidget(change);
+    actions->addStretch();
+    layout->addLayout(actions);
+    ui->tabWidget->addTab(tab, tr("Apps"));
+    connect(selectedAppsMode, &QCheckBox::toggled, this, [this](bool checked) {
+        chain->selectedAppsOnly = checked;
+        ui->defaultCombo->setEnabled(!checked);
+    });
+    ui->defaultCombo->setEnabled(!chain->selectedAppsOnly);
+    auto choose = [this](const QString& title) {
+        return QFileDialog::getOpenFileName(this, title, {}, tr("Windows executables (*.exe)"));
+    };
+    connect(add, &QPushButton::clicked, this, [this, choose] {
+        const QString chosen = choose(tr("Add executable"));
+        if (chosen.isEmpty()) return;
+        const QFileInfo file(chosen);
+        if (!file.exists() || !file.isFile() || file.suffix().compare(QLatin1String("exe"), Qt::CaseInsensitive) != 0) return;
+        const QString path = QDir::toNativeSeparators(file.canonicalFilePath());
+        for (const auto& app : chain->selectedApps) {
+            if (app.path.compare(path, Qt::CaseInsensitive) == 0) {
+                routeItemPlainBox(this, QMessageBox::Information, tr("Already listed"), tr("This executable is already listed."));
+                return;
+            }
+        }
+        chain->selectedApps.append({path, true});
+        refreshSelectedApps();
+    });
+    connect(change, &QPushButton::clicked, this, [this, choose] {
+        const int row = selectedAppsTable->currentRow();
+        if (row < 0 || row >= chain->selectedApps.size()) {
+            routeItemPlainBox(this, QMessageBox::Information, tr("Choose an entry"), tr("Select a row to update its path."));
+            return;
+        }
+        const QString chosen = choose(tr("Choose the new executable path"));
+        if (chosen.isEmpty()) return;
+        const QFileInfo file(chosen);
+        if (!file.exists() || !file.isFile() || file.suffix().compare(QLatin1String("exe"), Qt::CaseInsensitive) != 0) return;
+        const QString path = QDir::toNativeSeparators(file.canonicalFilePath());
+        for (int i = 0; i < chain->selectedApps.size(); ++i) {
+            if (i != row && chain->selectedApps[i].path.compare(path, Qt::CaseInsensitive) == 0) {
+                routeItemPlainBox(this, QMessageBox::Information, tr("Already listed"), tr("This executable is already listed."));
+                return;
+            }
+        }
+        chain->selectedApps[row].path = path;
+        refreshSelectedApps();
+    });
+    connect(selectedAppsTable, &QTableWidget::itemChanged, this, [this](QTableWidgetItem* item) {
+        if (item->column() == 0 && item->row() < chain->selectedApps.size())
+            chain->selectedApps[item->row()].enabled = item->checkState() == Qt::Checked;
+    });
+    refreshSelectedApps();
+#endif
+}
+
+void RouteItem::refreshSelectedApps() {
+    if (selectedAppsTable == nullptr) return;
+    QSignalBlocker block(selectedAppsTable);
+    selectedAppsTable->setRowCount(0);
+    for (int row = 0; row < chain->selectedApps.size(); ++row) {
+        const auto& app = chain->selectedApps[row];
+        const QFileInfo file(app.path);
+        selectedAppsTable->insertRow(row);
+        auto* name = new QTableWidgetItem(file.fileName());
+        name->setFlags(Qt::ItemIsEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsSelectable);
+        name->setCheckState(app.enabled ? Qt::Checked : Qt::Unchecked);
+        selectedAppsTable->setItem(row, 0, name);
+        auto* path = new QTableWidgetItem(app.path + (file.isFile() ? QString() : tr(" — missing or moved")));
+        path->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+        selectedAppsTable->setItem(row, 1, path);
+        auto* remove = new QPushButton(tr("Remove"), selectedAppsTable);
+        selectedAppsTable->setCellWidget(row, 2, remove);
+        connect(remove, &QPushButton::clicked, this, [this, row] {
+            chain->selectedApps.removeAt(row);
+            refreshSelectedApps();
+        });
+    }
 }
 
 void RouteItem::setDefaultOutbound(int outboundID) {
@@ -566,6 +676,9 @@ QString RouteItem::fingerprint() const {
     const QJsonObject object{
         {"name", copy.name},
         {"defaultOutboundID", copy.defaultOutboundID},
+        {"selectedAppsOnly", copy.selectedAppsOnly},
+        {"selectedApps", [&copy] { QJsonArray apps; for (const auto& app : copy.selectedApps)
+            apps.append(QJsonObject{{"path", app.path}, {"enabled", app.enabled}}); return apps; }()},
         {"isRemote", copy.isRemote},
         {"remoteURL", copy.remoteURL},
         {"autoUpdate", copy.autoUpdate},
@@ -615,7 +728,7 @@ void RouteItem::accept() {
     syncEndpointRules();
 
     // A remote profile may be saved before its first fetch; only plain profiles must be non-empty.
-    if (!chain->isRemote && chain->IsEmpty()) {
+    if (!chain->isRemote && !chain->selectedAppsOnly && chain->IsEmpty()) {
         QuickLists::EnsureLists(*chain);
         reloadRules();
         MessageBoxInfo(tr("Empty routing profile"), tr("No valid rules are in the profile"));
