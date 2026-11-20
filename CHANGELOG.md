@@ -1,3 +1,13 @@
+#### v0.1.0
+
+First independent MavisThroneVPS-VPN prerelease, based on Throne and preserving its Git history, GPL-3.0 license, and author credits.
+
+* Add a Windows **Selected apps only** routing mode for WireGuard profiles. Choose `.exe` files, enable or disable each entry, and save the list per routing profile. With TUN enabled, checked executables route through WireGuard while the default route stays direct.
+* Show missing executable paths, TUN and reconnect requirements, and WireGuard peer status in the connection flow.
+* Add Brazilian Portuguese translations for the full Qt interface and a translation coverage check.
+
+The selected-app mode does not provide a kill switch or guarantee DNS isolation. A running core does not by itself confirm a WireGuard peer handshake. Windows traffic checks and external endpoint tests are still needed; see [the selected-app VPN guide](docs/selected-apps-vpn.md).
+
 #### 1.4.2
 
 * Add Tor as an egress option **1**
