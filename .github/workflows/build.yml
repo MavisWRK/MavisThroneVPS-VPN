@@ -1,4 +1,4 @@
-name: Throne build matrix
+name: MavisThroneVPS-VPN build matrix
 on:
   workflow_dispatch:
     inputs:
@@ -1350,7 +1350,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - publish
-    if: github.event.inputs.publish == 'r'
+    if: github.event.inputs.publish == 'r' && github.repository == 'throneproj/Throne'
     permissions:
       contents: read
     steps:
@@ -1380,7 +1380,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - publish
-    if: github.event.inputs.publish == 'r'
+    if: github.event.inputs.publish == 'r' && github.repository == 'throneproj/Throne'
     permissions:
       contents: read
     steps:
@@ -1437,7 +1437,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - publish
-    if: github.event.inputs.publish == 'r'
+    if: github.event.inputs.publish == 'r' && github.repository == 'throneproj/Throne'
     permissions:
       contents: read
       pages: write
