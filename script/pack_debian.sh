@@ -1,7 +1,9 @@
 #!/bin/bash
 set -e
 
-VERSION="$1"
+TAG="$1"
+VERSION="${TAG#v}"
+VERSION="${VERSION#V}"
 ARCH="$2"
 SUFFIX=""
 [[ $3 == "systemqt" ]] && SUFFIX="-system-qt"
@@ -112,4 +114,4 @@ chmod 0755 "$PKG/DEBIAN/postinst" "$PKG/DEBIAN/prerm" "$PKG/DEBIAN/postrm"
 # desktop && PATH
 
 # xz, not Ubuntu's zstd default: dpkg before Debian 12 (Debian 10/11, Raspberry Pi OS bullseye) cannot unpack zstd.
-dpkg-deb -Zxz --root-owner-group --build "$PKG" "Throne-$VERSION-debian-$ARCH$SUFFIX.deb"
+dpkg-deb -Zxz --root-owner-group --build "$PKG" "Throne-$TAG-debian-$ARCH$SUFFIX.deb"
